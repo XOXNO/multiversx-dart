@@ -76,7 +76,7 @@ void main() {
       final signedTransaction = wallet.signTransaction(transaction);
 
       expect(signedTransaction.signature.hex, isEmpty);
-      expect(signedTransaction.guardianSignature?.hex ?? '', isNotEmpty);
+      expect(signedTransaction.guardianSignature.hex, isNotEmpty);
     });
   });
 
@@ -118,7 +118,7 @@ void main() {
       final signedTransaction = walletPair.signTransaction(transaction);
 
       expect(signedTransaction.signature.hex, isNotEmpty);
-      expect(signedTransaction.guardianSignature?.hex ?? '', isNotEmpty);
+      expect(signedTransaction.guardianSignature.hex, isNotEmpty);
     });
   });
 }

@@ -97,6 +97,13 @@ class SigningKey {
     final signedMessage = _signingKey.sign(Uint8List.fromList(data));
     return signedMessage.signature.toList();
   }
+
+  bool verify(final List<int> data, final List<int> signature) {
+    return _signingKey.verifyKey.verify(
+      message: Uint8List.fromList(data),
+      signature: ed25519.Signature(Uint8List.fromList(signature)),
+    );
+  }
 }
 
 final _bech32Encoder = ed25519.Bech32Encoder(hrp: 'erd');

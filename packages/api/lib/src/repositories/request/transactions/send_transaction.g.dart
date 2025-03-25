@@ -22,6 +22,8 @@ SendTransactionRequest _$SendTransactionRequestFromJson(
       options: json['options'] as num?,
       guardian: json['guardian'] as String?,
       guardianSignature: json['guardianSignature'] as String?,
+      relayer: json['relayer'] as String?,
+      relayerSignature: json['relayerSignature'] as String?,
     );
 
 Map<String, dynamic> _$SendTransactionRequestToJson(
@@ -40,4 +42,6 @@ Map<String, dynamic> _$SendTransactionRequestToJson(
       'options': instance.options,
       'guardian': instance.guardian,
       'guardianSignature': instance.guardianSignature,
+      'relayer': instance.relayer,
+      'relayerSignature': instance.relayerSignature,
     };

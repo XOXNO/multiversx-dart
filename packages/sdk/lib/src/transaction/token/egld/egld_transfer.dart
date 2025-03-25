@@ -23,5 +23,7 @@ final class EgldTransferTransaction extends Transaction {
     required super.sender,
     required super.receiver,
     required super.value,
+    super.relayer,
+    super.additionnalGasLimit,
   }) : super.withNetworkConfiguration();
 }

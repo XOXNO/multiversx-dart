@@ -16,7 +16,6 @@ export 'src/transaction/custom.dart';
 
 // Relayer transaction exports
 export 'src/transaction/relayer/relayer_v2.dart';
-export 'src/transaction/relayer/relayer_v3.dart';
 
 // Smart contract transaction exports
 export 'src/transaction/smart_contract/call.dart';
