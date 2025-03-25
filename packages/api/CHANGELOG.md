@@ -1,3 +1,8 @@
+## 0.1.5
+
+- export account object
+- add relayer and relayerSignature to SendTransactionRequest
+
 ## 0.1.4
 
 - add two new accounts endpoint
