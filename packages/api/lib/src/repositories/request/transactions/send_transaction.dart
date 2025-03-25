@@ -51,6 +51,10 @@ class SendTransactionRequest {
   /// Optional signature of the guardian for protected transactions.
   final String? guardianSignature;
 
+  final String? relayer;
+
+  final String? relayerSignature;
+
   /// Creates a new [SendTransactionRequest] instance.
   ///
   /// All parameters except [data], [options], [guardian], and [guardianSignature]
@@ -69,6 +73,8 @@ class SendTransactionRequest {
     this.options,
     this.guardian,
     this.guardianSignature,
+    this.relayer,
+    this.relayerSignature,
   });
 
   /// Creates a [SendTransactionRequest] instance from a JSON map.

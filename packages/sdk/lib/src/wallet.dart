@@ -14,6 +14,8 @@ abstract class WalletInterface {
   /// Indicates whether this wallet is a guardian wallet.
   bool get isGuardian;
 
+  bool get isRelayer;
+
   /// Signs a transaction using the wallet's private key.
   ///
   /// [transaction] The transaction to be signed.
@@ -29,7 +31,10 @@ class EmptyWallet implements WalletInterface {
   @override
   final bool isGuardian;
 
-  const EmptyWallet({this.isGuardian = false});
+  @override
+  final bool isRelayer;
+
+  const EmptyWallet({this.isGuardian = false, this.isRelayer = false});
 
   @override
   PublicKey get publicKey => PublicKey.zero();
@@ -51,11 +56,12 @@ class Wallet implements WalletInterface {
   static Future<Wallet> fromMnemonic({
     required final String mnemonic,
     bool isGuardian = false,
+    bool isRelayer = false,
   }) async {
     final bip44 = Bip44.fromMnemonic(mnemonic);
     final signingKey = await SigningKey.fromEntropy(bip44.entropy);
 
-    return Wallet._(bip44, signingKey, isGuardian);
+    return Wallet._(bip44, signingKey, isGuardian, isRelayer);
   }
 
   /// The BIP-44 implementation used for mnemonic and entropy management.
@@ -68,6 +74,9 @@ class Wallet implements WalletInterface {
   @override
   final bool isGuardian;
 
+  @override
+  final bool isRelayer;
+
   /// Creates a new Wallet instance from a raw seed.
   ///
   /// [seed] The raw seed bytes to generate the wallet from.
@@ -75,6 +84,7 @@ class Wallet implements WalletInterface {
   Wallet.fromSeed({
     required final Uint8List seed,
     this.isGuardian = false,
+    this.isRelayer = false,
   })  : _bip44 = null,
         _signingKey = SigningKey.fromSeed(seed: seed);
 
@@ -85,10 +95,11 @@ class Wallet implements WalletInterface {
   Wallet.fromSigningKey({
     required final SigningKey signingKey,
     this.isGuardian = false,
+    this.isRelayer = false,
   })  : _bip44 = null,
         _signingKey = signingKey;
 
-  Wallet._(this._bip44, this._signingKey, this.isGuardian);
+  Wallet._(this._bip44, this._signingKey, this.isGuardian, this.isRelayer);
 
   /// The entropy used to generate this wallet.
   String? get entropy => _bip44?.entropy;
@@ -110,6 +121,11 @@ class Wallet implements WalletInterface {
       utf8.encode(json.encode(transaction.toMap())),
     );
 
+    if (isRelayer) {
+      return transaction.copyWith(
+        newRelayerSignature: Signature.fromBytes(signature),
+      );
+    }
     if (isGuardian) {
       return transaction.copyWith(
         newGuardianSignature: Signature.fromBytes(signature),
@@ -134,18 +150,28 @@ class WalletPair {
   /// The optional guardian wallet of the pair.
   final WalletInterface guardianWallet;
 
+  final WalletInterface relayerWallet;
+
   /// Creates a new WalletPair instance.
   ///
   /// [mainWallet] The main wallet (required).
   /// [guardianWallet] The guardian wallet (optional).
-  WalletPair(this.mainWallet, {this.guardianWallet = const EmptyWallet()});
+  WalletPair(this.mainWallet,
+      {this.guardianWallet = const EmptyWallet(),
+      this.relayerWallet = const EmptyWallet()});
 
   WalletPair.empty()
       : mainWallet = EmptyWallet(),
-        guardianWallet = EmptyWallet();
+        guardianWallet = EmptyWallet(),
+        relayerWallet = EmptyWallet();
 
   /// Indicates whether this wallet pair has a guardian wallet.
   bool get hasGuardian => switch (guardianWallet) {
+        EmptyWallet() => false,
+        _ => true,
+      };
+
+  bool get hasRelayer => switch (relayerWallet) {
         EmptyWallet() => false,
         _ => true,
       };
@@ -155,9 +181,14 @@ class WalletPair {
   /// [transaction] The transaction to be signed.
   /// Returns the signed transaction.
   Transaction signTransaction(final Transaction transaction) {
-    final signedTransaction = mainWallet.signTransaction(transaction);
-    if (!hasGuardian) {
-      return signedTransaction;
+    var signedTransaction = mainWallet.signTransaction(transaction);
+    if (hasRelayer) {
+      final transactionForRelayerSignature =
+          signedTransaction.copyWith(newSignature: Signature.empty());
+      final relayerSignedTransaction =
+          relayerWallet.signTransaction(transactionForRelayerSignature);
+      signedTransaction = relayerSignedTransaction.copyWith(
+          newSignature: signedTransaction.signature);
     }
     return guardianWallet.signTransaction(signedTransaction);
   }

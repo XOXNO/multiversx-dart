@@ -24,9 +24,9 @@ base class Transaction {
   final Signature signature;
   final TransactionHash? transactionHash;
   final PublicKey? guardian;
-  final Signature? guardianSignature;
-  final List<Transaction>? innerTransactions;
+  final Signature guardianSignature;
   final PublicKey? relayer;
+  final Signature relayerSignature;
 
   /// Creates a new [Transaction] instance with the given parameters.
   const Transaction({
@@ -42,19 +42,12 @@ base class Transaction {
     this.signature = const Signature.empty(),
     this.transactionHash,
     this.guardian,
-    this.guardianSignature,
-    this.innerTransactions,
+    this.guardianSignature = const Signature.empty(),
     this.relayer,
+    this.relayerSignature = const Signature.empty(),
   });
 
   factory Transaction.fromJson(Map<String, dynamic> map) {
-    List<Transaction>? innerTxs;
-    if (map['innerTransactions'] != null) {
-      innerTxs = (map['innerTransactions'] as List)
-          .map((tx) => Transaction.fromJson(tx as Map<String, dynamic>))
-          .toList();
-    }
-
     return Transaction(
       nonce: Nonce(map['nonce'] as int),
       value: Balance.fromString(map['value'] as String),
@@ -75,11 +68,13 @@ base class Transaction {
           : null,
       guardianSignature: map['guardianSignature'] != null
           ? Signature(map['guardianSignature'] as String)
-          : null,
-      innerTransactions: innerTxs,
+          : const Signature.empty(),
       relayer: map['relayer'] != null
           ? PublicKey.fromBech32(map['relayer'] as String)
           : null,
+      relayerSignature: map['relayerSignature'] != null
+          ? Signature(map['relayerSignature'] as String)
+          : const Signature.empty(),
     );
   }
 
@@ -94,10 +89,11 @@ base class Transaction {
     this.signature = const Signature.empty(),
     this.transactionHash,
     this.guardian,
-    this.guardianSignature,
-    this.innerTransactions,
+    this.guardianSignature = const Signature.empty(),
     this.relayer,
-  })  : gasLimit = networkConfiguration.minGasLimit,
+    this.relayerSignature = const Signature.empty(),
+    GasLimit additionnalGasLimit = const GasLimit(0),
+  })  : gasLimit = additionnalGasLimit + networkConfiguration.minGasLimit,
         gasPrice = networkConfiguration.minGasPrice,
         chainId = networkConfiguration.chainId,
         version = networkConfiguration.minTransactionVersion;
@@ -116,21 +112,20 @@ base class Transaction {
     }
     map['chainID'] = chainId.value;
     map['version'] = version.value;
-    if (innerTransactions != null && innerTransactions!.isNotEmpty) {
-      map['innerTransactions'] =
-          innerTransactions!.map((tx) => tx.toMap()).toList();
-    }
-    if (relayer != null) {
-      map['relayer'] = relayer!.bech32;
+    if (guardian != null) {
+      map['guardian'] = guardian!.bech32;
     }
     if (signature.hex.isNotEmpty) {
       map['signature'] = signature.hex;
     }
-    if (guardian != null) {
-      map['guardian'] = guardian!.bech32;
+    if (guardianSignature.hex.isNotEmpty) {
+      map['guardianSignature'] = guardianSignature.hex;
     }
-    if (guardianSignature != null) {
-      map['guardianSignature'] = guardianSignature;
+    if (relayer != null) {
+      map['relayer'] = relayer!.bech32;
+    }
+    if (relayerSignature.hex.isNotEmpty) {
+      map['relayerSignature'] = relayerSignature.hex;
     }
     return map;
   }
@@ -142,8 +137,8 @@ base class Transaction {
     final Signature? newGuardianSignature,
     final TransactionHash? newTransactionHash,
     final PublicKey? newSender,
-    final List<Transaction>? newInnerTransactions,
     final PublicKey? newRelayer,
+    final Signature? newRelayerSignature,
     final GasLimit? newGasLimit,
   }) =>
       Transaction(
@@ -160,8 +155,8 @@ base class Transaction {
         guardian: newGuardian ?? guardian,
         guardianSignature: newGuardianSignature ?? guardianSignature,
         transactionHash: newTransactionHash ?? transactionHash,
-        innerTransactions: newInnerTransactions ?? innerTransactions,
         relayer: newRelayer ?? relayer,
+        relayerSignature: newRelayerSignature ?? relayerSignature,
       );
 }
 
@@ -176,6 +171,7 @@ base class TransactionWithNetworkConfiguration extends Transaction {
     required super.receiver,
     required super.gasLimit,
     required super.data,
+    super.relayer,
   }) : super(
           gasPrice: networkConfiguration.minGasPrice,
           chainId: networkConfiguration.chainId,
@@ -194,6 +190,7 @@ base class TransactionWithData extends TransactionWithNetworkConfiguration {
     required super.receiver,
     required final GasLimit gasLimit,
     required super.data,
+    super.relayer,
   }) : super(
           gasLimit: gasLimit +
               GasLimit.forPayload(

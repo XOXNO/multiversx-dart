@@ -28,6 +28,7 @@ final class EsdtTransferTransaction extends TransactionWithData {
     required super.receiver,
     required final String identifier,
     required final Balance amount,
+    super.relayer,
     final GasLimit gasLimit = const GasLimit(0),
     final String methodName = '',
     final List<dynamic> methodArguments = const [],

@@ -12,6 +12,7 @@ export 'package:multiversx_api/src/contants.dart';
 export 'package:multiversx_api/src/repositories/request/transactions/send_transaction.dart';
 
 export 'package:multiversx_api/src/repositories/response/response.dart';
+export 'package:multiversx_api/src/repositories/response/account/accounts.dart';
 export 'package:multiversx_api/src/repositories/response/dapp/get_config/get_config.dart';
 export 'package:multiversx_api/src/repositories/response/transactions/send_transaction/send_transaction.dart';
 export 'package:multiversx_api/src/repositories/response/transaction/transaction.dart';

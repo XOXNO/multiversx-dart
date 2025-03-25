@@ -5,9 +5,9 @@ import 'package:multiversx_sdk/multiversx_sdk.dart';
 
 import '../mnemonic.dart';
 
-// It performs a relayed transaction where one wallet pays for another wallet's transaction fees
+// This code demonstrates how to create and send a relayed ESDT transaction on the MultiversX blockchain
 void main() async {
-  // Initialize HTTP client and MultiversX API client
+  // Initialize HTTP client and MultiversX API for devnet
   final client = Client();
   final api = MultiverXApi(
     client: client,
@@ -19,53 +19,45 @@ void main() async {
     networkConfiguration: networkConfiguration,
   );
 
-  // Set up receiver address
+  // Set the receiver's address
   final receiver = PublicKey.fromBech32(
     'erd10ugfytgdndw5qmnykemjfpd7xrjs63f0r2qjhug0ek9gnfdjxq4s8qjvcx',
   );
 
-  // Create sender wallet from mnemonic phrase
-  final wallet = await Wallet.fromMnemonic(mnemonic: mnemonic);
-  final walletPair = WalletPair(wallet);
+  final mainWallet = await Wallet.fromMnemonic(mnemonic: mnemonic);
+  final relayerMnemonic =
+      'swamp demise physical vacant void sword win apple stem toss whisper shine female develop veteran harsh tuition amount plate empower market reflect dizzy pen';
+  final relayerWallet =
+      await Wallet.fromMnemonic(mnemonic: relayerMnemonic, isRelayer: true);
+
+  final walletPair = WalletPair(mainWallet, relayerWallet: relayerWallet);
+
   final accountDetails =
       await api.accounts.getAccount(walletPair.mainWallet.publicKey.bech32);
   final nonce = Nonce(accountDetails.nonce);
 
-  // Set up relayer wallet that will pay transaction fees
-  final relayerMnemonic = 'ADD_YOUR_RELAYER_MNEMONIC';
-  final relayerWallet = await Wallet.fromMnemonic(mnemonic: relayerMnemonic);
-  final relayerWalletPair = WalletPair(relayerWallet);
-  final relayerAddress = relayerWalletPair.mainWallet.publicKey;
-  final relayerAccountDetails =
-      await api.accounts.getAccount(relayerAddress.bech32);
-  final relayerNonce = Nonce(relayerAccountDetails.nonce);
+  final relayerAddress = walletPair.relayerWallet.publicKey;
 
-  // Create inner transaction to send 0.1 EGLD
-  final innerTransactions = [
-    sdk.signTransaction(
-      walletPair: walletPair,
-      transaction: sdk.createEGLDTransaction(
-        amount: Balance.fromEgld(0.1),
-        nonce: nonce,
-        receiver: receiver,
-        sender: walletPair.mainWallet.publicKey,
-      ),
-    ),
-  ];
-
-  // Create relayed transaction wrapper
-  final relayedTransaction = RelayedV3Transaction(
-    innerTransactions: innerTransactions,
+  // Create the inner ESDT transaction with 1 XOXNO amount
+  final transaction = EgldTransferTransaction(
     networkConfiguration: networkConfiguration,
-    nonce: relayerNonce,
+    value: Balance.fromEgld(0.1),
+    nonce: nonce,
+    receiver: receiver,
+    sender: walletPair.mainWallet.publicKey,
     relayer: relayerAddress,
+    additionnalGasLimit: const GasLimit(50000),
   );
 
+  // Sign the relayed transaction with relayer wallet
+  final signedRelayedTransaction = sdk.signTransaction(
+    walletPair: walletPair,
+    transaction: transaction,
+  );
   try {
-    // Sign and send the relayed transaction
-    final transactionResponse = await sdk.signAndSendTransaction(
-      walletPair: relayerWalletPair,
-      transaction: relayedTransaction,
+    // Send the signed relayed transaction
+    final transactionResponse = await sdk.sendSignedTransaction(
+      signedTransaction: signedRelayedTransaction,
     );
     print(transactionResponse.toJson());
   } on ApiException catch (e) {
